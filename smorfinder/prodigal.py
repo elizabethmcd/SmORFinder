@@ -133,35 +133,61 @@ def parse_gff(gff):
 
 
 def rename_proteins(faa, ffn, gff):
+    # Print the input file names to verify they are correctly received
+    print(f"Input FAA file: {faa}")
+    print(f"Input FFN file: {ffn}")
+    print(f"Input GFF file: {gff}")
+
     out_faa, out_ffn, out_gff = [], [], []
-    prefix = ''.join(list(choices(string.ascii_uppercase, k=6)))
+    prefix = ''.join(choices(string.ascii_uppercase, k=6))
     num = 0
+
+    # Iterating through each record
     for faa_rec, ffn_rec, gff_rec in zip(SeqIO.parse(faa, 'fasta'), SeqIO.parse(ffn, 'fasta'), parse_gff(gff)):
         num += 1
-        new_id = prefix+'_'+str(num)
+        new_id = f"{prefix}_{num}"
 
-        faa_rec.id = new_id
-        faa_rec.name = new_id
+        # Print each new ID for tracking
+        print(f"Processing record {num} with new ID: {new_id}")
+
+        # Update FAA record
+        faa_rec.id = faa_rec.name = new_id
         desc = faa_rec.description.split()
-        desc[-1] = 'ID='+new_id+';'+';'.join(desc[-1].split(';')[1:])
+        if ';' in desc[-1]:
+            desc[-1] = 'ID=' + new_id + ';' + ';'.join(desc[-1].split(';')[1:])
+        else:
+            desc.append(f'ID={new_id}')
         faa_rec.description = ' '.join(desc)
         out_faa.append(faa_rec)
 
-        ffn_rec.id = new_id
-        ffn_rec.name = new_id
+        # Update FFN record
+        ffn_rec.id = ffn_rec.name = new_id
         desc = ffn_rec.description.split()
-        desc[-1] = 'ID=' + new_id + ';' + ';'.join(desc[-1].split(';')[1:])
+        if ';' in desc[-1]:
+            desc[-1] = 'ID=' + new_id + ';' + ';'.join(desc[-1].split(';')[1:])
+        else:
+            desc.append(f'ID={new_id}')
         ffn_rec.description = ' '.join(desc)
         out_ffn.append(ffn_rec)
 
+        # Update GFF record
         gff_rec = gff_rec.split('\t')
-        gff_rec[-1] = 'ID=' + new_id + ';' + ';'.join(gff_rec[-1].split(';')[1:])
+        if ';' in gff_rec[-1]:
+            gff_rec[-1] = 'ID=' + new_id + ';' + ';'.join(gff_rec[-1].split(';')[1:])
+        else:
+            gff_rec[-1] += f'ID={new_id}'
         out_gff.append('\t'.join(gff_rec))
 
+    # Save the outputs and confirm with print statements
     SeqIO.write(out_faa, faa, 'fasta')
+    print(f"FAA output written to {faa}")
+
     SeqIO.write(out_ffn, ffn, 'fasta')
+    print(f"FFN output written to {ffn}")
+
     with open(gff, 'w') as outfile:
         print(*out_gff, sep='\n', file=outfile)
+    print(f"GFF output written to {gff}")
 
 
 def filter_prodigal_small_genes(outdir):
