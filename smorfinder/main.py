@@ -1,7 +1,7 @@
 import click
 from smorfinder import *
 from smorfinder.help import CustomHelp
-from smorfinder.run import _run
+from smorfinder.run import _run, _run_custom
 
 @click.group(cls=CustomHelp)
 def cli():
@@ -56,6 +56,43 @@ def meta(fasta, outdir, threads, prodigal_path, dsn1_model_path, dsn2_model_path
                smorf_hmm_path=smorf_hmm_path, hmmsearch_path=hmmsearch_path, force=force, dsn1_indiv_cutoff=dsn1_indiv_cutoff, dsn2_indiv_cutoff=dsn2_indiv_cutoff, phmm_indiv_cutoff=phmm_indiv_cutoff, dsn1_overlap_cutoff=dsn1_overlap_cutoff, dsn2_overlap_cutoff=dsn2_overlap_cutoff, phmm_overlap_cutoff=phmm_overlap_cutoff)
 
     _run(fasta, outdir, threads, prodigal_path, dsn1_model_path, dsn2_model_path, smorf_hmm_path, hmmsearch_path, force, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff, mode='meta')
+
+
+@cli.command(short_help='Run SmORFinder on pre-predicted proteins (≤50aa, custom locus tags)', help_priority=3)
+@click.argument('fasta', type=click.Path(exists=True))
+@click.argument('protein_faa', type=click.Path(exists=True))
+@click.argument('gff', type=click.Path(exists=True))
+@click.option('--outdir', '-o', default='smorf_output')
+@click.option('--dsn1-model-path', '-shp', default=DSN1_MODEL_PATH, type=click.Path(exists=True))
+@click.option('--dsn2-model-path', '-shp', default=DSN2_MODEL_PATH, type=click.Path(exists=True))
+@click.option('--smorf-hmm-path', '-shp', default=SMORFHMM_PATH, type=click.Path(exists=True))
+@click.option('--hmmsearch-path', '-hp', default=HMMSEARCH_PATH, type=click.Path(exists=True))
+@click.option('--force/--no-force', default=False, help="Force overwriting of output directory.")
+@click.option('--dsn1-indiv-cutoff', '-idsn1', default=0.9999, help='Minimum cutoff necessary to keep prediction based on DSN1 significance cutoff alone. Between 0 and 1, default=0.9999')
+@click.option('--dsn2-indiv-cutoff', '-idsn2', default=0.9999, help='Minimum cutoff necessary to keep prediction based on DSN2 significance cutoff alone. Between 0 and 1, default=0.9999')
+@click.option('--phmm-indiv-cutoff', '-iphmm', default=1e-6, help='Minimum cutoff necessary to keep prediction based on pHMM significance cutoff alone. Between 0 and 1, default=1e-6')
+@click.option('--dsn1-overlap-cutoff', '-odsn1', default=0.5, help='Minimum cutoff necessary to keep prediction based on DSN1 significance if both other models meet their respective cutoffs. Between 0 and 1, default=0.5')
+@click.option('--dsn2-overlap-cutoff', '-odsn2', default=0.5, help='Minimum cutoff necessary to keep prediction based on DSN2 significance if both other models meet their respective cutoffs. Between 0 and 1, default=0.5')
+@click.option('--phmm-overlap-cutoff', '-ophmm', default=1, help='Minimum cutoff necessary to keep prediction based on pHMM significance if both other models meet their respective cutoffs. Between 0 and 1, default=1')
+def custom(fasta, protein_faa, gff, outdir, dsn1_model_path, dsn2_model_path, smorf_hmm_path, hmmsearch_path, force, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff):
+    """Run SmORFinder on pre-predicted proteins (≤50aa, custom locus tags), requiring a GFF for context extraction.
+    
+    Required files:
+    - fasta: Reference genome FASTA file
+    - protein_faa: Protein sequences in FASTA format (≤50aa, headers must match GFF IDs)
+    - gff: GFF file with gene predictions (must have ID field in attributes)
+    """
+    log_params(command='custom', fasta=fasta, protein_faa=protein_faa, gff=gff, 
+               outdir=outdir, dsn1_model_path=dsn1_model_path, dsn2_model_path=dsn2_model_path,
+               smorf_hmm_path=smorf_hmm_path, hmmsearch_path=hmmsearch_path, force=force, 
+               dsn1_indiv_cutoff=dsn1_indiv_cutoff, dsn2_indiv_cutoff=dsn2_indiv_cutoff, 
+               phmm_indiv_cutoff=phmm_indiv_cutoff, dsn1_overlap_cutoff=dsn1_overlap_cutoff, 
+               dsn2_overlap_cutoff=dsn2_overlap_cutoff, phmm_overlap_cutoff=phmm_overlap_cutoff)
+
+    _run_custom(fasta, protein_faa, gff, outdir, dsn1_model_path, dsn2_model_path, 
+                smorf_hmm_path, hmmsearch_path, force, dsn1_indiv_cutoff, dsn2_indiv_cutoff, 
+                phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff)
+
 
 def log_params(**kwargs):
     click.echo("#### PARAMETERS ####")

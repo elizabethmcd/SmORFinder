@@ -1,4 +1,4 @@
-from os.path import join, basename
+from os.path import join, basename, exists
 from collections import defaultdict
 from Bio import SeqIO
 from os import makedirs
@@ -29,20 +29,40 @@ def _finalize(outdir, tmp_dir, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_
         if meets_significance_cutoffs(float(model_preds[seqid]['dsn1_prob_smorf']), float(model_preds[seqid]['dsn2_prob_smorf']), phmm_evalue, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff):
             keep_ids.add(seqid)
 
+    # Determine which files to use (Prodigal or custom)
+    if exists(join(tmp_dir, 'prodigal.small.faa')):
+        small_faa_file = join(tmp_dir, 'prodigal.small.faa')
+        small_ffn_file = join(tmp_dir, 'prodigal.small.ffn')
+        small_gff_file = join(tmp_dir, 'prodigal.small.gff')
+    elif exists(join(tmp_dir, 'custom.small.faa')):
+        small_faa_file = join(tmp_dir, 'custom.small.faa')
+        small_ffn_file = join(tmp_dir, 'custom.small.ffn')
+        small_gff_file = join(tmp_dir, 'custom.small.gff')
+    elif exists(join(tmp_dir, 'input.small.faa')):
+        small_faa_file = join(tmp_dir, 'input.small.faa')
+        small_gff_file = join(tmp_dir, 'input.small.gff')
+        # For custom command, we don't have nucleotide sequences, so skip ffn
+        small_ffn_file = None
+    else:
+        raise FileNotFoundError("No small gene files found in tmp directory")
+
     keep_faa, keep_ffn = [], []
-    for faa_rec, ffn_rec in zip(SeqIO.parse(join(tmp_dir, 'prodigal.small.faa'), 'fasta'),
-                                SeqIO.parse(join(tmp_dir, 'prodigal.small.ffn'), 'fasta')):
+    for faa_rec in SeqIO.parse(small_faa_file, 'fasta'):
         if faa_rec.id in keep_ids:
             keep_faa.append(faa_rec)
-        if ffn_rec.id in keep_ids:
-            keep_ffn.append(ffn_rec)
+    
+    # Only process nucleotide sequences if they exist (Prodigal mode)
+    if small_ffn_file:
+        for ffn_rec in SeqIO.parse(small_ffn_file, 'fasta'):
+            if ffn_rec.id in keep_ids:
+                keep_ffn.append(ffn_rec)
+        SeqIO.write(keep_ffn, join(outdir, final_prefix + '.ffn'), 'fasta')
 
     SeqIO.write(keep_faa, join(outdir, final_prefix + '.faa'), 'fasta')
-    SeqIO.write(keep_ffn, join(outdir, final_prefix + '.ffn'), 'fasta')
 
     final_table = []
     outgff = open(join(outdir, final_prefix + '.gff'), 'w')
-    for rec in parse_gff(join(tmp_dir, 'prodigal.small.gff')):
+    for rec in parse_gff(small_gff_file):
         rec = rec.split('\t')
         rec_id = rec[-1].split(';')[0].split('=')[-1]
 
