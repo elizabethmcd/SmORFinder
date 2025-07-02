@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     
     steps:
     - uses: actions/checkout@v3
@@ -16,7 +16,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.7'
+        python-version: '3.7.12'
     
     - name: Install system dependencies
       run: |
@@ -57,19 +57,19 @@ jobs:
     
     - name: Run standard SmORFinder on genome1
       run: |
-        smorf single test/genome_files/genome1.fna --outdir test_output_standard_genome1 --force
+        smorf single test/genome_files/ZhaoCC_2020__SRS5803191__bin.31.fna --outdir test_output_standard_genome1 --force
     
     - name: Run custom SmORFinder on genome1
       run: |
-        smorf custom test/genome_files/genome1.fna test/genome_files/genome1.faa test/genome_files/genome1.gff --outdir test_output_custom_genome1 --force
+        smorf custom test/genome_files/ZhaoCC_2020__SRS5803191__bin.31.fna test/genome_files/ZhaoCC_2020__SRS5803191__bin.31.faa test/genome_files/ZhaoCC_2020__SRS5803191__bin.31.gff --outdir test_output_custom_genome1 --force
     
     - name: Run standard SmORFinder on genome2
       run: |
-        smorf single test/genome_files/genome2.fna --outdir test_output_standard_genome2 --force
+        smorf single test/genome_files/160.fna --outdir test_output_standard_genome2 --force
     
     - name: Run custom SmORFinder on genome2
       run: |
-        smorf custom test/genome_files/genome2.fna test/genome_files/genome2.faa test/genome_files/genome2.gff --outdir test_output_custom_genome2 --force
+        smorf custom test/genome_files/160.fna test/genome_files/160.faa test/genome_files/160.gff --outdir test_output_custom_genome2 --force
     
     - name: Create comparison script
       run: |

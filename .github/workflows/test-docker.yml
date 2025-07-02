@@ -8,16 +8,27 @@ on:
 
 jobs:
   test-docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     
     steps:
     - uses: actions/checkout@v3
     
-    - name: Build Docker image
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Pull or Build Docker image
       run: |
-        # Build the Docker image
-        docker build -t smorfinder-test .
-        echo "Docker image built successfully"
+        # Try to pull the latest image from GHCR, fallback to building locally
+        if docker pull ghcr.io/${{ github.repository }}:latest; then
+          echo "Docker image pulled successfully from GHCR"
+        else
+          echo "Image not found in GHCR, building locally..."
+          docker build -t ghcr.io/${{ github.repository }}:latest .
+        fi
     
     - name: List test files
       run: |
@@ -39,14 +50,14 @@ jobs:
     - name: Run standard SmORFinder in Docker
       run: |
         # Run standard SmORFinder using Docker
-        docker run --rm -v $(pwd)/test/genome_files:/data -v $(pwd)/test_output_standard:/output smorfinder-test \
-          bash -c "cd /data && smorf single genome1.fna --outdir /output --force"
+        docker run --rm -v $(pwd)/test/genome_files:/data -v $(pwd)/test_output_standard:/output ghcr.io/${{ github.repository }}:latest \
+          bash -c "cd /data && smorf single ZhaoCC_2020__SRS5803191__bin.31.fna --outdir /output --force"
     
     - name: Run custom SmORFinder in Docker
       run: |
         # Run custom SmORFinder using Docker
-        docker run --rm -v $(pwd)/test/genome_files:/data -v $(pwd)/test_output_custom:/output smorfinder-test \
-          bash -c "cd /data && smorf custom genome1.fna genome1.faa genome1.gff --outdir /output --force"
+        docker run --rm -v $(pwd)/test/genome_files:/data -v $(pwd)/test_output_custom:/output ghcr.io/${{ github.repository }}:latest \
+          bash -c "cd /data && smorf custom ZhaoCC_2020__SRS5803191__bin.31.fna ZhaoCC_2020__SRS5803191__bin.31.faa ZhaoCC_2020__SRS5803191__bin.31.gff --outdir /output --force"
     
     - name: Create comparison script
       run: |
