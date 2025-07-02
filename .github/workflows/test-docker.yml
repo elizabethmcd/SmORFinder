@@ -16,8 +16,8 @@ jobs:
     - name: Wait for Docker build to complete (if triggered)
       if: contains(github.event.head_commit.message, '[docker]') || contains(github.event.head_commit.message, '[rebuild]')
       run: |
-        echo "Docker build was triggered, waiting 2 minutes for it to complete..."
-        sleep 120
+        echo "Docker build was triggered, waiting 10 minutes for it to complete..."
+        sleep 600
     
     - name: Install Python dependencies
       run: |
