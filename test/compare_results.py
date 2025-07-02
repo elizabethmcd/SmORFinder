@@ -99,24 +99,69 @@ def main(standard_dir, protein_dir):
     print("SmORFinder Results Comparison")
     print("=" * 40)
     
-    # Get output directory names
-    standard_name = os.path.basename(standard_dir)
-    protein_name = os.path.basename(protein_dir)
+    # Debug: List all files in both directories
+    print(f"\nFiles in standard directory ({standard_dir}):")
+    if os.path.exists(standard_dir):
+        for file in os.listdir(standard_dir):
+            print(f"  - {file}")
+    
+    print(f"\nFiles in protein directory ({protein_dir}):")
+    if os.path.exists(protein_dir):
+        for file in os.listdir(protein_dir):
+            print(f"  - {file}")
+    
+    # Try to find the actual output files
+    standard_faa = None
+    protein_faa = None
+    standard_tsv = None
+    protein_tsv = None
+    
+    # Look for .faa files
+    if os.path.exists(standard_dir):
+        for file in os.listdir(standard_dir):
+            if file.endswith('.faa'):
+                standard_faa = os.path.join(standard_dir, file)
+                break
+    
+    if os.path.exists(protein_dir):
+        for file in os.listdir(protein_dir):
+            if file.endswith('.faa'):
+                protein_faa = os.path.join(protein_dir, file)
+                break
+    
+    # Look for .tsv files
+    if os.path.exists(standard_dir):
+        for file in os.listdir(standard_dir):
+            if file.endswith('.tsv'):
+                standard_tsv = os.path.join(standard_dir, file)
+                break
+    
+    if os.path.exists(protein_dir):
+        for file in os.listdir(protein_dir):
+            if file.endswith('.tsv'):
+                protein_tsv = os.path.join(protein_dir, file)
+                break
     
     all_tests_passed = True
     
     # Compare FASTA files (protein sequences)
-    standard_faa = os.path.join(standard_dir, f"{standard_name}.faa")
-    protein_faa = os.path.join(protein_dir, f"{protein_name}.faa")
-    
-    if not compare_fasta_files(standard_faa, protein_faa, "Protein sequences (.faa)"):
+    if standard_faa and protein_faa:
+        if not compare_fasta_files(standard_faa, protein_faa, "Protein sequences (.faa)"):
+            all_tests_passed = False
+    else:
+        print(f"\nERROR: Could not find .faa files")
+        print(f"  Standard: {standard_faa}")
+        print(f"  Protein: {protein_faa}")
         all_tests_passed = False
     
     # Compare TSV files (detailed results)
-    standard_tsv = os.path.join(standard_dir, f"{standard_name}.tsv")
-    protein_tsv = os.path.join(protein_dir, f"{protein_name}.tsv")
-    
-    if not compare_tsv_files(standard_tsv, protein_tsv, "Detailed results (.tsv)"):
+    if standard_tsv and protein_tsv:
+        if not compare_tsv_files(standard_tsv, protein_tsv, "Detailed results (.tsv)"):
+            all_tests_passed = False
+    else:
+        print(f"\nERROR: Could not find .tsv files")
+        print(f"  Standard: {standard_tsv}")
+        print(f"  Protein: {protein_tsv}")
         all_tests_passed = False
     
     # Summary

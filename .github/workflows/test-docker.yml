@@ -92,6 +92,13 @@ jobs:
         find test_output_* -name "*.faa" -o -name "*.tsv" | head -10
         echo "=== File sizes ==="
         du -h test_output_*
+        echo "=== Directory contents ==="
+        for dir in test_output_*; do
+          if [ -d "$dir" ]; then
+            echo "Contents of $dir:"
+            ls -la "$dir"
+          fi
+        done
     
     - name: Upload test results
       uses: actions/upload-artifact@v4
