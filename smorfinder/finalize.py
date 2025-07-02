@@ -3,8 +3,6 @@ from collections import defaultdict
 from Bio import SeqIO
 from os import makedirs
 from shutil import move
-from smorfinder.finalize import _finalize, _finalize_protein
-
 
 exclude_smorfams = set(["smorfam03198", "smorfam03422", "smorfam03457", "smorfam03517", "smorfam03519", "smorfam03522", "smorfam03524", "smorfam03526", "smorfam03530", "smorfam03551", "smorfam03557", "smorfam03562", "smorfam03585", "smorfam03614", "smorfam03841"])
 
