@@ -31,15 +31,15 @@ RUN if [ "$BUILD_CONTEXT" = "local" ]; then \
         git clone $GITHUB_REPO; \
     fi
 
+# Copy local files for local builds
+COPY . /app/
+
 # Install SmORFinder
 RUN if [ "$BUILD_CONTEXT" = "local" ]; then \
         pip install -e .; \
     else \
         pip install ./SmORFinder; \
     fi
-
-# Download required data files
-RUN smorf --help
 
 # Set the PATH to include SmORFinder scripts
 ENV PATH="/app/scripts:${PATH}"

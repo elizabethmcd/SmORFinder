@@ -92,31 +92,31 @@ def compare_tsv_files(file1, file2, description):
 
 @click.command()
 @click.argument('standard_dir', type=click.Path(exists=True))
-@click.argument('custom_dir', type=click.Path(exists=True))
-def main(standard_dir, custom_dir):
-    """Compare SmORFinder results from standard and custom runs."""
+@click.argument('protein_dir', type=click.Path(exists=True))
+def main(standard_dir, protein_dir):
+    """Compare SmORFinder results from genome and protein workflows."""
     
     print("SmORFinder Results Comparison")
     print("=" * 40)
     
     # Get output directory names
     standard_name = os.path.basename(standard_dir)
-    custom_name = os.path.basename(custom_dir)
+    protein_name = os.path.basename(protein_dir)
     
     all_tests_passed = True
     
     # Compare FASTA files (protein sequences)
     standard_faa = os.path.join(standard_dir, f"{standard_name}.faa")
-    custom_faa = os.path.join(custom_dir, f"{custom_name}.faa")
+    protein_faa = os.path.join(protein_dir, f"{protein_name}.faa")
     
-    if not compare_fasta_files(standard_faa, custom_faa, "Protein sequences (.faa)"):
+    if not compare_fasta_files(standard_faa, protein_faa, "Protein sequences (.faa)"):
         all_tests_passed = False
     
     # Compare TSV files (detailed results)
     standard_tsv = os.path.join(standard_dir, f"{standard_name}.tsv")
-    custom_tsv = os.path.join(custom_dir, f"{custom_name}.tsv")
+    protein_tsv = os.path.join(protein_dir, f"{protein_name}.tsv")
     
-    if not compare_tsv_files(standard_tsv, custom_tsv, "Detailed results (.tsv)"):
+    if not compare_tsv_files(standard_tsv, protein_tsv, "Detailed results (.tsv)"):
         all_tests_passed = False
     
     # Summary
@@ -125,7 +125,7 @@ def main(standard_dir, custom_dir):
         print("✓ ALL TESTS PASSED: Results are identical except for headers")
         sys.exit(0)
     else:
-        print("✗ TESTS FAILED: Results differ between standard and custom runs")
+        print("✗ TESTS FAILED: Results differ between genome and protein workflows")
         sys.exit(1)
 
 

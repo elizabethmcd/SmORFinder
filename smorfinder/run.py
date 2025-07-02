@@ -7,10 +7,11 @@ from Bio import SeqIO
 from smorfinder.prodigal import *
 from smorfinder.hmmsearch import run_hmmsearch
 from smorfinder.model import *
-from smorfinder.finalize import _finalize
+from smorfinder.finalize import _finalize, _finalize_protein
 
 
 def _run(fasta, outdir, threads, prodigal_path, dsn1_model_path, dsn2_model_path, smorf_hmm_path, hmmsearch_path, force, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff, mode):
+    """Run SmORFinder on genome sequences using Prodigal for gene prediction."""
     tmp_dir = join(outdir, 'tmp')
     if force and isdir(outdir):
         shutil.rmtree(outdir)
@@ -42,7 +43,7 @@ def _run(fasta, outdir, threads, prodigal_path, dsn1_model_path, dsn2_model_path
     _finalize(outdir, tmp_dir, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff)
 
 
-def _run_custom(fasta, protein_faa, gff, outdir, dsn1_model_path, dsn2_model_path, smorf_hmm_path, hmmsearch_path, force, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff):
+def _run_protein(fasta, protein_faa, gff, outdir, dsn1_model_path, dsn2_model_path, smorf_hmm_path, hmmsearch_path, force, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff):
     """Run SmORFinder on pre-predicted proteins (≤50aa, custom locus tags), requiring a GFF for context extraction."""
     tmp_dir = join(outdir, 'tmp')
     if force and isdir(outdir):
@@ -66,7 +67,7 @@ def _run_custom(fasta, protein_faa, gff, outdir, dsn1_model_path, dsn2_model_pat
     dsn2_predictions = run_model(fiveprime, orf, threeprime, dsn2_model_path)
     write_results_to_file(dsn1_predictions, dsn2_predictions, names, fiveprime, orf, threeprime, join(tmp_dir, 'model_predictions.tsv'))
     click.echo("Finalizing results...")
-    _finalize(outdir, tmp_dir, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff)
+    _finalize_protein(outdir, tmp_dir, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff)
 
 
 def filter_custom_proteins(tmp_dir):
