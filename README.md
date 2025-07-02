@@ -1,5 +1,6 @@
 # SmORFinder
 A command line tool to identify and annotate small proteins in genomes and metagenomes.
+Modified from Bhatt lab.
 
 # Installation
 
