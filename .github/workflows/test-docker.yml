@@ -60,13 +60,13 @@ jobs:
       run: |
         # Run standard SmORFinder using Docker
         docker run --rm -v $(pwd)/test/genome_files:/data -v $(pwd)/test_output_standard:/output ghcr.io/elizabethmcd/smorfinder:latest \
-          bash -c "cd /data && smorf single ZhaoCC_2020__SRS5803191__bin.31.fna --outdir /output --force"
+          bash -c "cd /data && smorf single ZhaoCC_2020__SRS5803191__bin.31.fna --outdir /tmp/smorfinder_output --force && cp -r /tmp/smorfinder_output/* /output/"
     
     - name: Run custom SmORFinder in Docker
       run: |
         # Run custom SmORFinder using Docker
         docker run --rm -v $(pwd)/test/genome_files:/data -v $(pwd)/test_output_custom:/output ghcr.io/elizabethmcd/smorfinder:latest \
-          bash -c "cd /data && smorf custom ZhaoCC_2020__SRS5803191__bin.31.fna ZhaoCC_2020__SRS5803191__bin.31.faa ZhaoCC_2020__SRS5803191__bin.31.gff --outdir /output --force"
+          bash -c "cd /data && smorf custom ZhaoCC_2020__SRS5803191__bin.31.fna ZhaoCC_2020__SRS5803191__bin.31.faa ZhaoCC_2020__SRS5803191__bin.31.gff --outdir /tmp/smorfinder_output --force && cp -r /tmp/smorfinder_output/* /output/"
     
     - name: Create comparison script
       run: |
