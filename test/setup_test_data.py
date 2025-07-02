@@ -27,15 +27,22 @@ def clean_fasta_headers(input_file, output_file):
     print(f"✓ Cleaned headers in {output_file}")
 
 
-def run_prodigal(genome_file, output_prefix):
-    """Run Prodigal on a genome file."""
+def run_prodigal(genome_file, output_prefix, meta=False):
+    """Run Prodigal on a genome file using the exact same command as SmORFinder."""
     cmd = [
         'prodigal',
-        '-i', genome_file,
-        '-a', f'{output_prefix}.faa',
-        '-o', f'{output_prefix}.gff',
-        '-f', 'gff'
+        '-c',  # Closed ends (same as SmORFinder)
+        '-f', 'gff',
+        '-o', f'{output_prefix}.gff', 
+        '-a', f'{output_prefix}.faa', 
+        '-d', f'{output_prefix}.ffn',
+        '-i', genome_file
     ]
+    
+    # Add metagenomic mode if specified
+    if meta:
+        cmd.append('-p')  # Metagenomic mode
+        print(f"Running in metagenomic mode...")
     
     print(f"Running: {' '.join(cmd)}")
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -44,7 +51,7 @@ def run_prodigal(genome_file, output_prefix):
         print(f"Error running Prodigal: {result.stderr}")
         return False
     
-    print(f"✓ Generated {output_prefix}.faa and {output_prefix}.gff")
+    print(f"✓ Generated {output_prefix}.faa, {output_prefix}.ffn, and {output_prefix}.gff")
     return True
 
 
@@ -127,8 +134,8 @@ def main(genome_dir, output_dir):
         else:
             print(f"✓ Genome file already exists: {genome_output}")
         
-        # Run Prodigal
-        if run_prodigal(genome_output, output_prefix):
+        # Run Prodigal (try single genome mode first, fallback to metagenomic)
+        if run_prodigal(genome_output, output_prefix, meta=False):
             # Clean the protein FASTA headers
             faa_file = f"{output_prefix}.faa"
             clean_fasta_headers(faa_file, faa_file)
@@ -139,7 +146,22 @@ def main(genome_dir, output_dir):
             
             print(f"✓ Successfully processed {genome_name}")
         else:
-            print(f"✗ Failed to process {genome_name}")
+            print(f"✗ Failed to process {genome_name} in single genome mode")
+            print(f"Trying metagenomic mode...")
+            
+            # Try metagenomic mode as fallback
+            if run_prodigal(genome_output, output_prefix, meta=True):
+                # Clean the protein FASTA headers
+                faa_file = f"{output_prefix}.faa"
+                clean_fasta_headers(faa_file, faa_file)
+                
+                # Clean the GFF file IDs
+                gff_file = f"{output_prefix}.gff"
+                clean_gff_ids(gff_file)
+                
+                print(f"✓ Successfully processed {genome_name} in metagenomic mode")
+            else:
+                print(f"✗ Failed to process {genome_name} in both modes")
     
     print(f"\nTest data setup complete!")
     print(f"Files are in: {output_dir}")
