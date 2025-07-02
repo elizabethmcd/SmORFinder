@@ -7,7 +7,7 @@ from Bio import SeqIO
 from smorfinder.prodigal import *
 from smorfinder.hmmsearch import run_hmmsearch
 from smorfinder.model import *
-from smorfinder.finalize import _finalize, _finalize_protein
+from smorfinder.finalize import _finalize, _finalize_pre_called
 
 
 def _run(fasta, outdir, threads, prodigal_path, dsn1_model_path, dsn2_model_path, smorf_hmm_path, hmmsearch_path, force, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff, mode):
@@ -43,19 +43,20 @@ def _run(fasta, outdir, threads, prodigal_path, dsn1_model_path, dsn2_model_path
     _finalize(outdir, tmp_dir, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff)
 
 
-def _run_protein(fasta, protein_faa, gff, outdir, dsn1_model_path, dsn2_model_path, smorf_hmm_path, hmmsearch_path, force, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff):
-    """Run SmORFinder on pre-predicted proteins (≤50aa, custom locus tags), requiring a GFF for context extraction."""
+def _run_pre_called(fasta, protein_faa, nucleotide_ffn, gff, outdir, dsn1_model_path, dsn2_model_path, smorf_hmm_path, hmmsearch_path, force, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff):
+    """Run SmORFinder on pre-called genes from Prodigal output (≤50aa, custom locus tags), requiring all Prodigal output files for context extraction."""
     tmp_dir = join(outdir, 'tmp')
     if force and isdir(outdir):
         shutil.rmtree(outdir)
     makedirs(tmp_dir, exist_ok=True)
 
-    # Copy protein FASTA and GFF to tmp directory
+    # Copy all Prodigal output files to tmp directory
     shutil.copy(protein_faa, join(tmp_dir, 'input.faa'))
+    shutil.copy(nucleotide_ffn, join(tmp_dir, 'input.ffn'))
     shutil.copy(gff, join(tmp_dir, 'input.gff'))
 
     click.echo("Filtering to only predicted genes less than or equal to 50 aa in length...")
-    filter_custom_proteins(tmp_dir)
+    filter_pre_called_genes(tmp_dir)
 
     click.echo("Running HMMSEARCH...")
     run_hmmsearch(hmmsearch_path, smorf_hmm_path, join(tmp_dir, 'input.small.faa'), tmp_dir)
@@ -67,11 +68,11 @@ def _run_protein(fasta, protein_faa, gff, outdir, dsn1_model_path, dsn2_model_pa
     dsn2_predictions = run_model(fiveprime, orf, threeprime, dsn2_model_path)
     write_results_to_file(dsn1_predictions, dsn2_predictions, names, fiveprime, orf, threeprime, join(tmp_dir, 'model_predictions.tsv'))
     click.echo("Finalizing results...")
-    _finalize_protein(outdir, tmp_dir, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff)
+    _finalize_pre_called(outdir, tmp_dir, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff)
 
 
-def filter_custom_proteins(tmp_dir):
-    """Filter custom protein predictions to only small genes (≤51 aa, ≤153 nt)."""
+def filter_pre_called_genes(tmp_dir):
+    """Filter pre-called gene predictions to only small genes (≤51 aa, ≤153 nt)."""
     # Filter protein sequences
     faa_recs = []
     for rec in SeqIO.parse(join(tmp_dir, 'input.faa'), 'fasta'):
@@ -79,49 +80,16 @@ def filter_custom_proteins(tmp_dir):
             faa_recs.append(rec)
     SeqIO.write(faa_recs, join(tmp_dir, 'input.small.faa'), 'fasta')
 
+    # Filter nucleotide sequences
+    ffn_recs = []
+    for rec in SeqIO.parse(join(tmp_dir, 'input.ffn'), 'fasta'):
+        if len(rec.seq) <= 153:
+            ffn_recs.append(rec)
+    SeqIO.write(ffn_recs, join(tmp_dir, 'input.small.ffn'), 'fasta')
+
     # Filter GFF file
     outgff = open(join(tmp_dir, 'input.small.gff'), 'w')
     with open(join(tmp_dir, 'input.gff')) as infile:
-        for line in infile:
-            if line.startswith('#'):
-                continue
-            line = line.strip().split('\t')
-
-            if line[2] != 'CDS':
-                continue
-
-            if int(line[4]) - int(line[3]) + 1 <= 153:
-                print('\t'.join(line), file=outgff)
-    outgff.close()
-
-
-def process_custom_genes(gff, protein_faa, nucleotide_ffn, tmp_dir):
-    """Process custom gene predictions and create standardized files."""
-    # Copy input files to tmp directory with standardized names
-    shutil.copy(protein_faa, join(tmp_dir, 'custom.faa'))
-    shutil.copy(nucleotide_ffn, join(tmp_dir, 'custom.ffn'))
-    shutil.copy(gff, join(tmp_dir, 'custom.gff'))
-
-
-def filter_custom_small_genes(tmp_dir):
-    """Filter custom gene predictions to only small genes (≤50 aa, ≤153 nt)."""
-    # Filter nucleotide sequences
-    ffn_recs = []
-    for rec in SeqIO.parse(join(tmp_dir, 'custom.ffn'), 'fasta'):
-        if len(rec.seq) <= 153:
-            ffn_recs.append(rec)
-    SeqIO.write(ffn_recs, join(tmp_dir, 'custom.small.ffn'), 'fasta')
-
-    # Filter protein sequences
-    faa_recs = []
-    for rec in SeqIO.parse(join(tmp_dir, 'custom.faa'), 'fasta'):
-        if len(rec.seq) <= 51:
-            faa_recs.append(rec)
-    SeqIO.write(faa_recs, join(tmp_dir, 'custom.small.faa'), 'fasta')
-
-    # Filter GFF file
-    outgff = open(join(tmp_dir, 'custom.small.gff'), 'w')
-    with open(join(tmp_dir, 'custom.gff')) as infile:
         for line in infile:
             if line.startswith('#'):
                 continue

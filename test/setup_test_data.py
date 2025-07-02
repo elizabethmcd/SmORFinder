@@ -9,6 +9,8 @@ import subprocess
 import click
 from pathlib import Path
 from Bio import SeqIO
+from random import choices
+import string
 
 
 def clean_fasta_headers(input_file, output_file):
@@ -25,6 +27,59 @@ def clean_fasta_headers(input_file, output_file):
     
     SeqIO.write(cleaned_records, output_file, 'fasta')
     print(f"✓ Cleaned headers in {output_file}")
+
+
+def rename_proteins_like_smorfinder(faa_file, ffn_file, gff_file):
+    """Rename proteins exactly like SmORFinder does - with random prefix and sequential numbering."""
+    out_faa, out_ffn, out_gff = [], [], []
+    prefix = ''.join(choices(string.ascii_uppercase, k=6))
+    num = 0
+    
+    # Read all files
+    faa_records = list(SeqIO.parse(faa_file, 'fasta'))
+    ffn_records = list(SeqIO.parse(ffn_file, 'fasta'))
+    
+    with open(gff_file, 'r') as f:
+        gff_lines = [line.strip() for line in f if not line.startswith('#') and len(line.strip()) > 10]
+    
+    # Rename each protein
+    for faa_rec, ffn_rec, gff_line in zip(faa_records, ffn_records, gff_lines):
+        num += 1
+        new_id = f"{prefix}_{num}"
+
+        # Update FASTA record
+        faa_rec.id = new_id
+        faa_rec.name = new_id
+        desc = faa_rec.description.split()
+        if len(desc) > 0:
+            desc[-1] = f'ID={new_id};' + ';'.join(desc[-1].split(';')[1:])
+            faa_rec.description = ' '.join(desc)
+        out_faa.append(faa_rec)
+
+        # Update FFN record
+        ffn_rec.id = new_id
+        ffn_rec.name = new_id
+        desc = ffn_rec.description.split()
+        if len(desc) > 0:
+            desc[-1] = f'ID={new_id};' + ';'.join(desc[-1].split(';')[1:])
+            ffn_rec.description = ' '.join(desc)
+        out_ffn.append(ffn_rec)
+
+        # Update GFF line
+        gff_parts = gff_line.split('\t')
+        if len(gff_parts) >= 9:
+            gff_parts[-1] = f'ID={new_id};' + ';'.join(gff_parts[-1].split(';')[1:])
+            out_gff.append('\t'.join(gff_parts))
+
+    # Write updated files
+    SeqIO.write(out_faa, faa_file, 'fasta')
+    SeqIO.write(out_ffn, ffn_file, 'fasta')
+    
+    with open(gff_file, 'w') as outfile:
+        for line in out_gff:
+            outfile.write(line + '\n')
+    
+    print(f"✓ Renamed proteins with prefix {prefix} ({num} proteins)")
 
 
 def run_prodigal(genome_file, output_prefix, meta=False):
@@ -136,13 +191,12 @@ def main(genome_dir, output_dir):
         
         # Run Prodigal (try single genome mode first, fallback to metagenomic)
         if run_prodigal(genome_output, output_prefix, meta=False):
-            # Clean the protein FASTA headers
-            faa_file = f"{output_prefix}.faa"
-            clean_fasta_headers(faa_file, faa_file)
-            
-            # Clean the GFF file IDs
-            gff_file = f"{output_prefix}.gff"
-            clean_gff_ids(gff_file)
+            # Rename proteins like SmORFinder does
+            rename_proteins_like_smorfinder(
+                f"{output_prefix}.faa",
+                f"{output_prefix}.ffn", 
+                f"{output_prefix}.gff"
+            )
             
             print(f"✓ Successfully processed {genome_name}")
         else:
@@ -151,13 +205,12 @@ def main(genome_dir, output_dir):
             
             # Try metagenomic mode as fallback
             if run_prodigal(genome_output, output_prefix, meta=True):
-                # Clean the protein FASTA headers
-                faa_file = f"{output_prefix}.faa"
-                clean_fasta_headers(faa_file, faa_file)
-                
-                # Clean the GFF file IDs
-                gff_file = f"{output_prefix}.gff"
-                clean_gff_ids(gff_file)
+                # Rename proteins like SmORFinder does
+                rename_proteins_like_smorfinder(
+                    f"{output_prefix}.faa",
+                    f"{output_prefix}.ffn", 
+                    f"{output_prefix}.gff"
+                )
                 
                 print(f"✓ Successfully processed {genome_name} in metagenomic mode")
             else:
@@ -167,7 +220,7 @@ def main(genome_dir, output_dir):
     print(f"Files are in: {output_dir}")
     print(f"\nYou can now run tests with:")
     print(f"smorf single {output_dir}/genome1.fna --outdir test_output_standard")
-    print(f"smorf custom {output_dir}/genome1.fna {output_dir}/genome1.faa {output_dir}/genome1.gff --outdir test_output_custom")
+    print(f"smorf protein {output_dir}/genome1.fna {output_dir}/genome1.faa {output_dir}/genome1.gff --outdir test_output_protein")
 
 
 if __name__ == '__main__':

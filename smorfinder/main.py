@@ -1,7 +1,7 @@
 import click
 from smorfinder import *
 from smorfinder.help import CustomHelp
-from smorfinder.run import _run, _run_protein
+from smorfinder.run import _run, _run_pre_called
 
 @click.group(cls=CustomHelp)
 def cli():
@@ -14,8 +14,8 @@ def cli():
     • single: Complete/draft genome assembly of a single species
     • meta: Metagenomic assembly (multi-threaded)
     
-    PROTEIN WORKFLOW (use your own gene predictions):
-    • protein: Pre-predicted proteins with custom locus tags
+    PRE-CALLED GENES WORKFLOW (use your own Prodigal output):
+    • pre-called: Pre-predicted genes with custom locus tags from Prodigal runs
     """
     pass
 
@@ -102,9 +102,10 @@ def meta(fasta, outdir, threads, prodigal_path, dsn1_model_path, dsn2_model_path
          dsn2_overlap_cutoff, phmm_overlap_cutoff, mode='meta')
 
 
-@cli.command(short_help='Run SmORFinder on pre-predicted proteins (≤50aa)', help_priority=3)
+@cli.command(short_help='Run SmORFinder on pre-called genes from Prodigal output (≤50aa)', help_priority=3)
 @click.argument('fasta', type=click.Path(exists=True))
 @click.argument('protein_faa', type=click.Path(exists=True))
+@click.argument('nucleotide_ffn', type=click.Path(exists=True))
 @click.argument('gff', type=click.Path(exists=True))
 @click.option('--outdir', '-o', default='smorf_output', help='Output directory for results')
 @click.option('--dsn1-model-path', '-d1p', default=DSN1_MODEL_PATH, type=click.Path(exists=True), help='Path to DSN1 model file')
@@ -118,38 +119,40 @@ def meta(fasta, outdir, threads, prodigal_path, dsn1_model_path, dsn2_model_path
 @click.option('--dsn1-overlap-cutoff', '-odsn1', default=0.5, help='DSN1 overlap significance cutoff (0-1, default=0.5)')
 @click.option('--dsn2-overlap-cutoff', '-odsn2', default=0.5, help='DSN2 overlap significance cutoff (0-1, default=0.5)')
 @click.option('--phmm-overlap-cutoff', '-ophmm', default=1, help='pHMM overlap significance cutoff (default=1)')
-def protein(fasta, protein_faa, gff, outdir, dsn1_model_path, dsn2_model_path, smorf_hmm_path, hmmsearch_path, force, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff):
-    """Run SmORFinder on pre-predicted proteins with custom locus tags.
+def pre_called(fasta, protein_faa, nucleotide_ffn, gff, outdir, dsn1_model_path, dsn2_model_path, smorf_hmm_path, hmmsearch_path, force, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff):
+    """Run SmORFinder on pre-called genes from Prodigal output with custom locus tags.
     
-    This workflow is for when you already have protein predictions and want to use
-    your own locus tag formatting instead of Prodigal's default naming.
+    This workflow is for when you already have Prodigal gene predictions and want to use
+    your own locus tag formatting instead of SmORFinder's default naming.
     
     Required files:
     • FASTA: Reference genome file (.fa, .fna, .fasta) for context extraction
-    • PROTEIN_FAA: Protein sequences in FASTA format (≤50aa, headers must match GFF IDs)
-    • GFF: GFF file with gene predictions (must have ID field in attributes)
+    • PROTEIN_FAA: Protein sequences in FASTA format from Prodigal (.faa)
+    • NUCLEOTIDE_FFN: Nucleotide sequences in FASTA format from Prodigal (.ffn)
+    • GFF: GFF file with gene predictions from Prodigal (.gff)
     
-    Note: Protein headers in the FASTA file must match the ID field in the GFF file
-    for proper sequence extraction and annotation.
+    Note: All input files should be from the same Prodigal run to ensure consistency.
+    Protein and nucleotide headers must match the ID field in the GFF file.
     
     Output files:
     • {outdir}.faa: Predicted small protein sequences
+    • {outdir}.ffn: Predicted small nucleotide sequences
     • {outdir}.gff: Gene predictions with SmORFinder annotations
     • {outdir}.tsv: Detailed results table
     
     Alternative: Use 'single' or 'meta' commands with just a genome FASTA file
     to let SmORFinder run Prodigal for gene prediction automatically.
     """
-    log_params(command='protein', fasta=fasta, protein_faa=protein_faa, gff=gff, 
+    log_params(command='pre-called', fasta=fasta, protein_faa=protein_faa, nucleotide_ffn=nucleotide_ffn, gff=gff, 
                outdir=outdir, dsn1_model_path=dsn1_model_path, dsn2_model_path=dsn2_model_path,
                smorf_hmm_path=smorf_hmm_path, hmmsearch_path=hmmsearch_path, force=force, 
                dsn1_indiv_cutoff=dsn1_indiv_cutoff, dsn2_indiv_cutoff=dsn2_indiv_cutoff, 
                phmm_indiv_cutoff=phmm_indiv_cutoff, dsn1_overlap_cutoff=dsn1_overlap_cutoff, 
                dsn2_overlap_cutoff=dsn2_overlap_cutoff, phmm_overlap_cutoff=phmm_overlap_cutoff)
 
-    _run_protein(fasta, protein_faa, gff, outdir, dsn1_model_path, dsn2_model_path, 
-                smorf_hmm_path, hmmsearch_path, force, dsn1_indiv_cutoff, dsn2_indiv_cutoff, 
-                phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff)
+    _run_pre_called(fasta, protein_faa, nucleotide_ffn, gff, outdir, dsn1_model_path, dsn2_model_path, 
+                   smorf_hmm_path, hmmsearch_path, force, dsn1_indiv_cutoff, dsn2_indiv_cutoff, 
+                   phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff)
 
 
 def log_params(**kwargs):

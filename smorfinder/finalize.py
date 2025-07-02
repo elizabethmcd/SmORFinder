@@ -143,8 +143,8 @@ def parse_model_prediction(model_preds):
     return model_preds_out
 
 
-def _finalize_protein(outdir, tmp_dir, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff):
-    """Finalize results for protein workflow (pre-predicted proteins)."""
+def _finalize_pre_called(outdir, tmp_dir, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff):
+    """Finalize results for pre-called genes workflow (complete Prodigal output)."""
     
     final_prefix = basename(outdir)
 
@@ -166,29 +166,20 @@ def _finalize_protein(outdir, tmp_dir, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phm
         if meets_significance_cutoffs(float(model_preds[seqid]['dsn1_prob_smorf']), float(model_preds[seqid]['dsn2_prob_smorf']), phmm_evalue, dsn1_indiv_cutoff, dsn2_indiv_cutoff, phmm_indiv_cutoff, dsn1_overlap_cutoff, dsn2_overlap_cutoff, phmm_overlap_cutoff):
             keep_ids.add(seqid)
 
-    # Debug: Print what we found
-    print(f"DEBUG: Found {len(keep_ids)} sequences to keep: {list(keep_ids)[:5]}...")
-
-    # For custom workflow, we only have protein sequences (no nucleotide)
+    # For pre-called workflow, we have both protein and nucleotide sequences
     keep_faa = []
-    protein_ids_found = set()
+    keep_ffn = []
     
     for faa_rec in SeqIO.parse(join(tmp_dir, 'input.small.faa'), 'fasta'):
-        protein_ids_found.add(faa_rec.id)
         if faa_rec.id in keep_ids:
             keep_faa.append(faa_rec)
     
-    # Debug: Print what protein IDs we found
-    print(f"DEBUG: Found {len(protein_ids_found)} protein sequences: {list(protein_ids_found)[:5]}...")
-    print(f"DEBUG: Matched {len(keep_faa)} proteins to keep_ids")
-    
-    # Check for ID mismatches
-    if keep_ids and not keep_faa:
-        print(f"DEBUG: WARNING - No protein sequences matched! This suggests ID mismatch.")
-        print(f"DEBUG: Sample keep_ids: {list(keep_ids)[:3]}")
-        print(f"DEBUG: Sample protein_ids: {list(protein_ids_found)[:3]}")
+    for ffn_rec in SeqIO.parse(join(tmp_dir, 'input.small.ffn'), 'fasta'):
+        if ffn_rec.id in keep_ids:
+            keep_ffn.append(ffn_rec)
 
     SeqIO.write(keep_faa, join(outdir, final_prefix + '.faa'), 'fasta')
+    SeqIO.write(keep_ffn, join(outdir, final_prefix + '.ffn'), 'fasta')
 
     final_table = []
     outgff = open(join(outdir, final_prefix + '.gff'), 'w')
