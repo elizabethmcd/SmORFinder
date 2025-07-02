@@ -8,15 +8,31 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v3
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.7.12'
+    - name: Install Python 3.7.12
+      run: |
+        # Add deadsnakes PPA for Python 3.7
+        sudo apt-get update
+        sudo apt-get install -y software-properties-common
+        sudo add-apt-repository ppa:deadsnakes/ppa -y
+        sudo apt-get update
+        sudo apt-get install -y python3.7 python3.7-dev python3.7-distutils python3.7-venv
+        
+        # Install pip for Python 3.7
+        curl -sS https://bootstrap.pypa.io/get-pip.py | python3.7
+        
+        # Create symlinks
+        sudo ln -sf /usr/bin/python3.7 /usr/local/bin/python3.7
+        sudo ln -sf /usr/bin/pip3.7 /usr/local/bin/pip3.7
+        
+        # Set Python 3.7 as default for this session
+        echo "Using Python 3.7.12:"
+        python3.7 --version
+        pip3.7 --version
     
     - name: Install system dependencies
       run: |
@@ -26,7 +42,7 @@ jobs:
           gcc \
           g++ \
           make \
-          libpython3-dev \
+          libpython3.7-dev \
           prodigal \
           hmmer \
           wget \
@@ -35,7 +51,7 @@ jobs:
     
     - name: Install SmORFinder
       run: |
-        pip install -e .
+        pip3.7 install -e .
         smorf  # Download required data files
     
     - name: List test files
