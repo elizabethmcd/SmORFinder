@@ -29,14 +29,14 @@ jobs:
     - name: Pull or Build Docker image
       run: |
         # Try to pull the latest image from GHCR, fallback to building locally
-        if docker pull ghcr.io/${{ github.repository }}:latest; then
+        if docker pull ghcr.io/elizabethmcd/smorfinder:latest; then
           echo "Docker image pulled successfully from GHCR"
-        elif docker pull ghcr.io/${{ github.repository }}:main; then
+        elif docker pull ghcr.io/elizabethmcd/smorfinder:main; then
           echo "Docker image pulled successfully from GHCR (main tag)"
-          docker tag ghcr.io/${{ github.repository }}:main ghcr.io/${{ github.repository }}:latest
+          docker tag ghcr.io/elizabethmcd/smorfinder:main ghcr.io/elizabethmcd/smorfinder:latest
         else
           echo "Image not found in GHCR, building locally..."
-          docker build -t ghcr.io/${{ github.repository }}:latest .
+          docker build -t ghcr.io/elizabethmcd/smorfinder:latest .
         fi
     
     - name: List test files
@@ -59,13 +59,13 @@ jobs:
     - name: Run standard SmORFinder in Docker
       run: |
         # Run standard SmORFinder using Docker
-        docker run --rm -v $(pwd)/test/genome_files:/data -v $(pwd)/test_output_standard:/output ghcr.io/${{ github.repository }}:latest \
+        docker run --rm -v $(pwd)/test/genome_files:/data -v $(pwd)/test_output_standard:/output ghcr.io/elizabethmcd/smorfinder:latest \
           bash -c "cd /data && smorf single ZhaoCC_2020__SRS5803191__bin.31.fna --outdir /output --force"
     
     - name: Run custom SmORFinder in Docker
       run: |
         # Run custom SmORFinder using Docker
-        docker run --rm -v $(pwd)/test/genome_files:/data -v $(pwd)/test_output_custom:/output ghcr.io/${{ github.repository }}:latest \
+        docker run --rm -v $(pwd)/test/genome_files:/data -v $(pwd)/test_output_custom:/output ghcr.io/elizabethmcd/smorfinder:latest \
           bash -c "cd /data && smorf custom ZhaoCC_2020__SRS5803191__bin.31.fna ZhaoCC_2020__SRS5803191__bin.31.faa ZhaoCC_2020__SRS5803191__bin.31.gff --outdir /output --force"
     
     - name: Create comparison script
