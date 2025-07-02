@@ -8,6 +8,23 @@ import os
 import subprocess
 import click
 from pathlib import Path
+from Bio import SeqIO
+
+
+def clean_fasta_headers(input_file, output_file):
+    """Clean FASTA headers by removing everything after the first whitespace."""
+    cleaned_records = []
+    
+    for record in SeqIO.parse(input_file, 'fasta'):
+        # Keep only the part before the first whitespace
+        clean_id = record.id.split()[0]
+        record.id = clean_id
+        record.name = clean_id
+        record.description = clean_id
+        cleaned_records.append(record)
+    
+    SeqIO.write(cleaned_records, output_file, 'fasta')
+    print(f"✓ Cleaned headers in {output_file}")
 
 
 def run_prodigal(genome_file, output_prefix):
@@ -31,21 +48,67 @@ def run_prodigal(genome_file, output_prefix):
     return True
 
 
+def clean_gff_ids(gff_file):
+    """Clean GFF file to match cleaned FASTA headers."""
+    cleaned_lines = []
+    
+    with open(gff_file, 'r') as f:
+        for line in f:
+            if line.startswith('#') or line.strip() == '':
+                cleaned_lines.append(line)
+                continue
+            
+            parts = line.strip().split('\t')
+            if len(parts) >= 9:
+                # Clean the attributes column (last column)
+                attributes = parts[8]
+                if 'ID=' in attributes:
+                    # Extract the ID and clean it
+                    for attr in attributes.split(';'):
+                        if attr.startswith('ID='):
+                            old_id = attr.split('=')[1]
+                            clean_id = old_id.split()[0]  # Remove everything after whitespace
+                            new_attr = f"ID={clean_id}"
+                            # Replace the old ID attribute
+                            attributes = attributes.replace(attr, new_attr)
+                            break
+                
+                parts[8] = attributes
+                cleaned_lines.append('\t'.join(parts) + '\n')
+            else:
+                cleaned_lines.append(line)
+    
+    # Write back to the same file
+    with open(gff_file, 'w') as f:
+        f.writelines(cleaned_lines)
+    
+    print(f"✓ Cleaned GFF IDs in {gff_file}")
+
+
 @click.command()
 @click.option('--genome-dir', default='test_genomes', help='Directory containing genome FASTA files')
 @click.option('--output-dir', default='test_data', help='Output directory for processed files')
+
 def main(genome_dir, output_dir):
     """Setup test data for SmORFinder testing."""
     
     # Create output directory
     Path(output_dir).mkdir(exist_ok=True)
     
-    # Find all .fna files in genome directory
-    genome_files = list(Path(genome_dir).glob('*.fna'))
+    # Find all .fna and .fa files in genome directory
+    genome_files = []
+    genome_path = Path(genome_dir)
+    
+    # Search for both .fna and .fa files
+    genome_files.extend(list(genome_path.glob('*.fna')))
+    genome_files.extend(list(genome_path.glob('*.fa')))
+    
+    # Remove duplicates (in case of multiple extensions)
+    genome_files = list(set(genome_files))
     
     if not genome_files:
-        print(f"No .fna files found in {genome_dir}")
-        print("Please place your test genome FASTA files in the genome directory.")
+        print(f"No .fna or .fa files found in {genome_dir}")
+        print("Please place your test genome FASTA files (.fna or .fa) in the genome directory.")
         return
     
     print(f"Found {len(genome_files)} genome files")
@@ -56,13 +119,24 @@ def main(genome_dir, output_dir):
         
         print(f"\nProcessing {genome_name}...")
         
-        # Copy genome file to output directory
+        # Copy and clean genome file to output directory with .fna extension
         genome_output = f"{output_prefix}.fna"
         if not os.path.exists(genome_output):
-            subprocess.run(['cp', str(genome_file), genome_output])
+            # Clean the genome FASTA headers
+            clean_fasta_headers(str(genome_file), genome_output)
+        else:
+            print(f"✓ Genome file already exists: {genome_output}")
         
         # Run Prodigal
         if run_prodigal(genome_output, output_prefix):
+            # Clean the protein FASTA headers
+            faa_file = f"{output_prefix}.faa"
+            clean_fasta_headers(faa_file, faa_file)
+            
+            # Clean the GFF file IDs
+            gff_file = f"{output_prefix}.gff"
+            clean_gff_ids(gff_file)
+            
             print(f"✓ Successfully processed {genome_name}")
         else:
             print(f"✗ Failed to process {genome_name}")

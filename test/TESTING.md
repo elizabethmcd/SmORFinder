@@ -21,10 +21,6 @@ pip install -e .
 # Install system dependencies
 sudo apt-get install prodigal hmmer
 
-# Download SmORFinder data files
-smorf
-```
-
 ### 2. Prepare Test Data
 
 Create a directory with test genome FASTA files:
@@ -37,11 +33,11 @@ mkdir test_genomes
 Run the setup script to generate .faa and .gff files:
 
 ```bash
-python scripts/setup_test_data.py --genome-dir test_genomes --output-dir test_data
+python test/setup_test_data.py --genome-dir test_genomes --output-dir genome_files
 ```
 
 This will:
-- Copy genome files to `test_data/`
+- Copy genome files to `genome_files/`
 - Run Prodigal on each genome
 - Generate corresponding .faa and .gff files
 
@@ -51,13 +47,13 @@ This will:
 
 ```bash
 # Run standard SmORFinder
-smorf single test_data/genome1.fna --outdir test_output_standard
+smorf single genome_files/genome1.fna --outdir test_output_standard
 
 # Run custom SmORFinder
-smorf custom test_data/genome1.fna test_data/genome1.faa test_data/genome1.gff --outdir test_output_custom
+smorf custom genome_files/genome1.fna genome_files/genome1.faa genome_files/genome1.gff --outdir test_output_custom
 
 # Compare results
-python scripts/compare_results.py test_output_standard test_output_custom
+python test/compare_results.py test_output_standard test_output_custom
 ```
 
 ### Automated Testing (GitHub Actions)
