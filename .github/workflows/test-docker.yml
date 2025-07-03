@@ -68,20 +68,20 @@ jobs:
             genome_name=$(basename "$genome" .fna)
             echo "Testing genome: $genome_name"
             
-            # Check if corresponding .faa and .gff files exist
-            if [ -f "test/genome_files/${genome_name}.faa" ] && [ -f "test/genome_files/${genome_name}.gff" ]; then
+            # Check if corresponding .faa, .ffn, and .gff files exist
+            if [ -f "test/genome_files/${genome_name}.faa" ] && [ -f "test/genome_files/${genome_name}.ffn" ] && [ -f "test/genome_files/${genome_name}.gff" ]; then
               echo "Running standard workflow for $genome_name..."
               docker run --rm -v $(pwd)/test/genome_files:/data -v $(pwd)/test_output_${genome_name}_standard:/output ghcr.io/elizabethmcd/smorfinder:latest \
                 bash -c "cd /data && smorf single ${genome_name}.fna --outdir /tmp/${genome_name} --force && cp -r /tmp/${genome_name}/* /output/"
               
-              echo "Running protein workflow for $genome_name..."
-              docker run --rm -v $(pwd)/test/genome_files:/data -v $(pwd)/test_output_${genome_name}_protein:/output ghcr.io/elizabethmcd/smorfinder:latest \
-                bash -c "cd /data && smorf protein ${genome_name}.fna ${genome_name}.faa ${genome_name}.gff --outdir /tmp/${genome_name} --force && cp -r /tmp/${genome_name}/* /output/"
+              echo "Running pre-called workflow for $genome_name..."
+              docker run --rm -v $(pwd)/test/genome_files:/data -v $(pwd)/test_output_${genome_name}_pre_called:/output ghcr.io/elizabethmcd/smorfinder:latest \
+                bash -c "cd /data && smorf pre-called ${genome_name}.fna ${genome_name}.faa ${genome_name}.ffn ${genome_name}.gff --outdir /tmp/${genome_name} --force && cp -r /tmp/${genome_name}/* /output/"
               
               echo "Comparing results for $genome_name..."
-              python test/compare_results.py test_output_${genome_name}_standard test_output_${genome_name}_protein
+              python test/compare_results.py test_output_${genome_name}_standard test_output_${genome_name}_pre_called
             else
-              echo "Skipping $genome_name (missing .faa or .gff files)"
+              echo "Skipping $genome_name (missing .faa, .ffn, or .gff files)"
             fi
           fi
         done
