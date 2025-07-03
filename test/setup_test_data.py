@@ -220,7 +220,7 @@ def main(genome_dir, output_dir):
     print(f"Files are in: {output_dir}")
     print(f"\nYou can now run tests with:")
     print(f"smorf single {output_dir}/genome1.fna --outdir test_output_standard")
-    print(f"smorf protein {output_dir}/genome1.fna {output_dir}/genome1.faa {output_dir}/genome1.gff --outdir test_output_protein")
+    print(f"smorf pre-called {output_dir}/genome1.fna {output_dir}/genome1.faa {output_dir}/genome1.ffn {output_dir}/genome1.gff --outdir test_output_pre_called")
 
 
 if __name__ == '__main__':

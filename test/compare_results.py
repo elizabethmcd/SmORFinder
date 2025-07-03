@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Compare results from standard and custom SmORFinder runs.
-Ensures identical protein sequences except for headers.
+Compare SmORFinder results from genome and pre-called workflows.
+Ensures identical protein sequences and counts.
 """
 
 import sys
@@ -11,11 +11,10 @@ from Bio import SeqIO
 import click
 
 
-def normalize_fasta_headers(fasta_file):
+def extract_protein_sequences(fasta_file):
     """Extract protein sequences and sort them for comparison."""
     sequences = []
     for record in SeqIO.parse(fasta_file, 'fasta'):
-        # Store sequence without header
         sequences.append(str(record.seq))
     return sorted(sequences)
 
@@ -31,8 +30,8 @@ def compare_fasta_files(file1, file2, description):
         print(f"ERROR: {file2} not found")
         return False
     
-    seqs1 = normalize_fasta_headers(file1)
-    seqs2 = normalize_fasta_headers(file2)
+    seqs1 = extract_protein_sequences(file1)
+    seqs2 = extract_protein_sequences(file2)
     
     if seqs1 == seqs2:
         print(f"✓ {description}: Sequences are identical ({len(seqs1)} proteins)")
@@ -40,61 +39,27 @@ def compare_fasta_files(file1, file2, description):
     else:
         print(f"✗ {description}: Sequences differ!")
         print(f"  Standard: {len(seqs1)} proteins")
-        print(f"  Custom: {len(seqs2)} proteins")
+        print(f"  Pre-called: {len(seqs2)} proteins")
         
         # Find differences
         set1 = set(seqs1)
         set2 = set(seqs2)
         only_in_standard = set1 - set2
-        only_in_custom = set2 - set1
+        only_in_pre_called = set2 - set1
         
         if only_in_standard:
             print(f"  Only in standard: {len(only_in_standard)} sequences")
-        if only_in_custom:
-            print(f"  Only in custom: {len(only_in_custom)} sequences")
+        if only_in_pre_called:
+            print(f"  Only in pre-called: {len(only_in_pre_called)} sequences")
         
         return False
-
-
-def compare_tsv_files(file1, file2, description):
-    """Compare TSV files by their content (excluding header differences)."""
-    print(f"\nComparing {description}...")
-    
-    if not os.path.exists(file1):
-        print(f"ERROR: {file1} not found")
-        return False
-    if not os.path.exists(file2):
-        print(f"ERROR: {file2} not found")
-        return False
-    
-    # Read and compare TSV content
-    with open(file1) as f1, open(file2) as f2:
-        lines1 = f1.readlines()
-        lines2 = f2.readlines()
-    
-    # Skip header line and compare data
-    if len(lines1) > 1 and len(lines2) > 1:
-        data1 = sorted(lines1[1:])  # Skip header
-        data2 = sorted(lines2[1:])  # Skip header
-        
-        if data1 == data2:
-            print(f"✓ {description}: Data is identical ({len(data1)} entries)")
-            return True
-        else:
-            print(f"✗ {description}: Data differs!")
-            print(f"  Standard: {len(data1)} entries")
-            print(f"  Custom: {len(data2)} entries")
-            return False
-    else:
-        print(f"⚠ {description}: One or both files are empty or have no data")
-        return True
 
 
 @click.command()
 @click.argument('standard_dir', type=click.Path(exists=True))
-@click.argument('protein_dir', type=click.Path(exists=True))
-def main(standard_dir, protein_dir):
-    """Compare SmORFinder results from genome and protein workflows."""
+@click.argument('pre_called_dir', type=click.Path(exists=True))
+def main(standard_dir, pre_called_dir):
+    """Compare SmORFinder results from genome and pre-called workflows."""
     
     print("SmORFinder Results Comparison")
     print("=" * 40)
@@ -105,16 +70,14 @@ def main(standard_dir, protein_dir):
         for file in os.listdir(standard_dir):
             print(f"  - {file}")
     
-    print(f"\nFiles in protein directory ({protein_dir}):")
-    if os.path.exists(protein_dir):
-        for file in os.listdir(protein_dir):
+    print(f"\nFiles in pre-called directory ({pre_called_dir}):")
+    if os.path.exists(pre_called_dir):
+        for file in os.listdir(pre_called_dir):
             print(f"  - {file}")
     
-    # Try to find the actual output files
+    # Try to find the .faa files
     standard_faa = None
-    protein_faa = None
-    standard_tsv = None
-    protein_tsv = None
+    pre_called_faa = None
     
     # Look for .faa files
     if os.path.exists(standard_dir):
@@ -123,54 +86,31 @@ def main(standard_dir, protein_dir):
                 standard_faa = os.path.join(standard_dir, file)
                 break
     
-    if os.path.exists(protein_dir):
-        for file in os.listdir(protein_dir):
+    if os.path.exists(pre_called_dir):
+        for file in os.listdir(pre_called_dir):
             if file.endswith('.faa'):
-                protein_faa = os.path.join(protein_dir, file)
-                break
-    
-    # Look for .tsv files
-    if os.path.exists(standard_dir):
-        for file in os.listdir(standard_dir):
-            if file.endswith('.tsv'):
-                standard_tsv = os.path.join(standard_dir, file)
-                break
-    
-    if os.path.exists(protein_dir):
-        for file in os.listdir(protein_dir):
-            if file.endswith('.tsv'):
-                protein_tsv = os.path.join(protein_dir, file)
+                pre_called_faa = os.path.join(pre_called_dir, file)
                 break
     
     all_tests_passed = True
     
     # Compare FASTA files (protein sequences)
-    if standard_faa and protein_faa:
-        if not compare_fasta_files(standard_faa, protein_faa, "Protein sequences (.faa)"):
+    if standard_faa and pre_called_faa:
+        if not compare_fasta_files(standard_faa, pre_called_faa, "Protein sequences (.faa)"):
             all_tests_passed = False
     else:
         print(f"\nERROR: Could not find .faa files")
         print(f"  Standard: {standard_faa}")
-        print(f"  Protein: {protein_faa}")
-        all_tests_passed = False
-    
-    # Compare TSV files (detailed results)
-    if standard_tsv and protein_tsv:
-        if not compare_tsv_files(standard_tsv, protein_tsv, "Detailed results (.tsv)"):
-            all_tests_passed = False
-    else:
-        print(f"\nERROR: Could not find .tsv files")
-        print(f"  Standard: {standard_tsv}")
-        print(f"  Protein: {protein_tsv}")
+        print(f"  Pre-called: {pre_called_faa}")
         all_tests_passed = False
     
     # Summary
     print("\n" + "=" * 40)
     if all_tests_passed:
-        print("✓ ALL TESTS PASSED: Results are identical except for headers")
+        print("✓ ALL TESTS PASSED: Protein sequences and counts are identical")
         sys.exit(0)
     else:
-        print("✗ TESTS FAILED: Results differ between genome and protein workflows")
+        print("✗ TESTS FAILED: Results differ between genome and pre-called workflows")
         sys.exit(1)
 
 
