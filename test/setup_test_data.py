@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Setup test data for SmORFinder testing.
-Downloads test genomes and runs Prodigal to generate .faa and .gff files.
+Downloads test genomes and runs Pyrodigal to generate .faa and .gff files.
 """
 
 import os
@@ -29,7 +29,7 @@ def clean_fasta_headers(input_file, output_file):
     print(f"✓ Cleaned headers in {output_file}")
 
 
-def rename_proteins_like_smorfinder(faa_file, ffn_file, gff_file):
+def rename_proteins(faa_file, ffn_file, gff_file):
     """Rename proteins exactly like SmORFinder does - with random prefix and sequential numbering."""
     out_faa, out_ffn, out_gff = [], [], []
     prefix = ''.join(choices(string.ascii_uppercase, k=6))
@@ -82,11 +82,13 @@ def rename_proteins_like_smorfinder(faa_file, ffn_file, gff_file):
     print(f"✓ Renamed proteins with prefix {prefix} ({num} proteins)")
 
 
-def run_prodigal(genome_file, output_prefix, meta=False):
-    """Run Prodigal on a genome file using the exact same command as SmORFinder."""
+def run_pyrodigal(genome_file, output_prefix, meta=False):
+    """Run Pyrodigal on a genome file using the exact same command as SmORFinder."""
     cmd = [
-        'prodigal',
-        '-c',  # Closed ends (same as SmORFinder)
+        'pyrodigal',
+        '--min-gene', '15',
+        '--max-overlap', '15',
+        '-c',  # Closed ends
         '-f', 'gff',
         '-o', f'{output_prefix}.gff', 
         '-a', f'{output_prefix}.faa', 
@@ -103,7 +105,7 @@ def run_prodigal(genome_file, output_prefix, meta=False):
     result = subprocess.run(cmd, capture_output=True, text=True)
     
     if result.returncode != 0:
-        print(f"Error running Prodigal: {result.stderr}")
+        print(f"Error running Pyrodigal: {result.stderr}")
         return False
     
     print(f"✓ Generated {output_prefix}.faa, {output_prefix}.ffn, and {output_prefix}.gff")
@@ -189,10 +191,10 @@ def main(genome_dir, output_dir):
         else:
             print(f"✓ Genome file already exists: {genome_output}")
         
-        # Run Prodigal (try single genome mode first, fallback to metagenomic)
-        if run_prodigal(genome_output, output_prefix, meta=False):
+        # Run Pyrodigal (try single genome mode first, fallback to metagenomic)
+        if run_pyrodigal(genome_output, output_prefix, meta=False):
             # Rename proteins like SmORFinder does
-            rename_proteins_like_smorfinder(
+            rename_proteins(
                 f"{output_prefix}.faa",
                 f"{output_prefix}.ffn", 
                 f"{output_prefix}.gff"
@@ -204,9 +206,9 @@ def main(genome_dir, output_dir):
             print(f"Trying metagenomic mode...")
             
             # Try metagenomic mode as fallback
-            if run_prodigal(genome_output, output_prefix, meta=True):
+            if run_pyrodigal(genome_output, output_prefix, meta=True):
                 # Rename proteins like SmORFinder does
-                rename_proteins_like_smorfinder(
+                rename_proteins(
                     f"{output_prefix}.faa",
                     f"{output_prefix}.ffn", 
                     f"{output_prefix}.gff"
